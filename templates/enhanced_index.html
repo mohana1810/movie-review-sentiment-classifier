@@ -1,0 +1,322 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Movie Review Sentiment Classifier</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='enhanced_style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-badge">🎬</div>
+      <div>
+        <h1>Movie Review Sentiment Classifier</h1>
+        <p class="hero-subtitle">Classify reviews instantly as Positive, Negative, or Mixed / Neutral.</p>
+      </div>
+    </header>
+
+    <section class="stats-grid">
+      <div class="stat-card good">
+        <span>Accuracy</span>
+        <strong>{{ metrics.accuracy if metrics else '—' }}%</strong>
+      </div>
+      <div class="stat-card warm">
+        <span>Precision</span>
+        <strong>{{ metrics.precision if metrics else '—' }}%</strong>
+      </div>
+      <div class="stat-card soft">
+        <span>Recall</span>
+        <strong>{{ metrics.recall if metrics else '—' }}%</strong>
+      </div>
+      <div class="stat-card coral">
+        <span>F1-Score</span>
+        <strong>{{ metrics.f1 if metrics else '—' }}%</strong>
+      </div>
+    </section>
+
+    <section class="nav-strip">
+      <button class="tab-btn active" data-tab="classify">Classify</button>
+      <button class="tab-btn" data-tab="batch">Batch</button>
+      <button class="tab-btn" data-tab="model">Model Info</button>
+      <button class="tab-btn" data-tab="about">About</button>
+    </section>
+
+    <section class="panel">
+      <div class="tab-panel active" id="classify-panel">
+        <div class="panel-card">
+          <h2>Single Review Mode</h2>
+          <form method="POST">
+            <input type="hidden" name="active_tab" value="classify">
+            <label for="review">Enter movie review</label>
+            <textarea id="review" name="review" rows="7" placeholder="Type your movie review here...">{{ review }}</textarea>
+
+            <div class="sample-row">
+              {% for sample in samples %}
+                <a class="sample-link" href="{{ url_for('sample', index=loop.index0) }}">Sample {{ loop.index }}</a>
+              {% endfor %}
+            </div>
+
+            <button type="submit" class="primary-btn">Predict Sentiment</button>
+          </form>
+
+          {% if result %}
+          <div class="result-card {% if result.prediction == 'Positive' %}positive{% elif result.prediction == 'Negative' %}negative{% else %}neutral{% endif %}">
+            <h3>Prediction: {{ result.prediction }}</h3>
+            <p>Confidence: {{ result.confidence }}%</p>
+          </div>
+
+          <div class="progress-block">
+            <div class="progress-head"><span>Positive Probability</span><strong>{{ result.pos_prob }}%</strong></div>
+            <div class="bar"><div class="fill pos" style="width: {{ result.pos_prob }}%"></div></div>
+
+            <div class="progress-head"><span>Negative Probability</span><strong>{{ result.neg_prob }}%</strong></div>
+            <div class="bar"><div class="fill neg" style="width: {{ result.neg_prob }}%"></div></div>
+
+            <div class="cleaned-box">
+              <span>Cleaned text</span>
+              <p>{{ cleaned }}</p>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tab-panel" id="batch-panel">
+        <div class="panel-card">
+          <h2>Batch Mode</h2>
+          <form method="POST">
+            <input type="hidden" name="active_tab" value="batch">
+            <label for="batch_text">Enter one review per line</label>
+            <textarea id="batch_text" name="batch_text" rows="8" placeholder="Movie was great!&#10;Terrible and boring.&#10;Not bad at all.">{{ batch_text }}</textarea>
+            <button type="submit" class="primary-btn">Classify All</button>
+          </form>
+
+          {% if batch_summary.total %}
+          <div class="summary-row">
+            <div class="mini-card mint">Positive<br><strong>{{ batch_summary.positive }}</strong></div>
+            <div class="mini-card amber">Negative<br><strong>{{ batch_summary.negative }}</strong></div>
+            <div class="mini-card gold">Mixed / Neutral<br><strong>{{ batch_summary.neutral }}</strong></div>
+            <div class="mini-card slate">Total<br><strong>{{ batch_summary.total }}</strong></div>
+          </div>
+
+          <div class="chart-grid">
+            <div class="chart-card">
+              <h3>Batch Sentiment Pie</h3>
+              <canvas id="batchPieChart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Batch Sentiment Bar</h3>
+              <canvas id="batchBarChart"></canvas>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Review snippet</th>
+                  <th>Sentiment</th>
+                  <th>Confidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in batch_results %}
+                <tr>
+                  <td>{{ row.review }}</td>
+                  <td>{{ row.prediction }}</td>
+                  <td>{{ row.confidence }}%</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tab-panel" id="model-panel">
+        <div class="panel-card">
+          <h2>Model Info</h2>
+          <div class="info-grid">
+            <div class="info-item"><span>Algorithm</span><strong>Logistic Regression</strong></div>
+            <div class="info-item"><span>Vectorizer</span><strong>TF-IDF</strong></div>
+            <div class="info-item"><span>N-grams</span><strong>1–2</strong></div>
+            <div class="info-item"><span>Dataset Size</span><strong>{{ metrics.dataset_size if metrics else '—' }}+</strong></div>
+          </div>
+
+          <div class="chart-card model-chart">
+            <h3>Model Performance</h3>
+            <canvas id="modelMetricsChart"></canvas>
+          </div>
+
+          <details class="accordion" open>
+            <summary>Confusion Matrix</summary>
+            <div class="matrix-table">
+              <table>
+                <thead>
+                  <tr><th></th><th>Pred Neg</th><th>Pred Pos</th></tr>
+                </thead>
+                <tbody>
+                  <tr><th>Actual Neg</th><td>{{ metrics.confusion_matrix[0][0] if metrics else '—' }}</td><td>{{ metrics.confusion_matrix[0][1] if metrics else '—' }}</td></tr>
+                  <tr><th>Actual Pos</th><td>{{ metrics.confusion_matrix[1][0] if metrics else '—' }}</td><td>{{ metrics.confusion_matrix[1][1] if metrics else '—' }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+
+          <details class="accordion">
+            <summary>Classification Report</summary>
+            <div class="table-wrap small-table">
+              <table>
+                <thead>
+                  <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Negative</td><td>{{ '%.3f'|format(metrics.report['Negative']['precision']) if metrics and metrics.report.get('Negative') else '—' }}</td><td>{{ '%.3f'|format(metrics.report['Negative']['recall']) if metrics and metrics.report.get('Negative') else '—' }}</td><td>{{ '%.3f'|format(metrics.report['Negative']['f1-score']) if metrics and metrics.report.get('Negative') else '—' }}</td></tr>
+                  <tr><td>Positive</td><td>{{ '%.3f'|format(metrics.report['Positive']['precision']) if metrics and metrics.report.get('Positive') else '—' }}</td><td>{{ '%.3f'|format(metrics.report['Positive']['recall']) if metrics and metrics.report.get('Positive') else '—' }}</td><td>{{ '%.3f'|format(metrics.report['Positive']['f1-score']) if metrics and metrics.report.get('Positive') else '—' }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="about-panel">
+        <div class="panel-card">
+          <h2>About & Applications</h2>
+          <p>{{ about_text }}</p>
+          <div class="apps-grid">
+            <div class="app-chip">Movie recommendations</div>
+            <div class="app-chip">Audience feedback</div>
+            <div class="app-chip">Social media monitoring</div>
+            <div class="app-chip">Review summarization</div>
+            <div class="app-chip">Entertainment analytics</div>
+            <div class="app-chip">Opinion mining</div>
+          </div>
+          <div class="footer-note">Built for college project presentation and GitHub upload.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const buttons = document.querySelectorAll('.tab-btn');
+    const panels = {
+      classify: document.getElementById('classify-panel'),
+      batch: document.getElementById('batch-panel'),
+      model: document.getElementById('model-panel'),
+      about: document.getElementById('about-panel')
+    };
+
+    function showTab(name) {
+      Object.entries(panels).forEach(([key, panel]) => {
+        panel.classList.toggle('active', key === name);
+      });
+      buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+    }
+
+    buttons.forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+    showTab({{ active_tab|tojson }});
+
+    const batchTotal = {{ batch_summary.total|default(0) }};
+    const batchPositive = {{ batch_summary.positive|default(0) }};
+    const batchNegative = {{ batch_summary.negative|default(0) }};
+    const batchNeutral = {{ batch_summary.neutral|default(0) }};
+
+    if (batchTotal > 0 && document.getElementById('batchPieChart')) {
+      new Chart(document.getElementById('batchPieChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Positive', 'Negative', 'Mixed / Neutral'],
+          datasets: [{
+            data: [batchPositive, batchNegative, batchNeutral],
+            backgroundColor: ['#16a34a', '#dc2626', '#f59e0b'],
+            borderColor: ['#ffffff', '#ffffff', '#ffffff'],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#1f2937' }
+            }
+          }
+        }
+      });
+    }
+
+    if (batchTotal > 0 && document.getElementById('batchBarChart')) {
+      new Chart(document.getElementById('batchBarChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Positive', 'Negative', 'Mixed / Neutral'],
+          datasets: [{
+            label: 'Reviews',
+            data: [batchPositive, batchNegative, batchNeutral],
+            backgroundColor: ['#10b981', '#f97316', '#f59e0b'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              ticks: { color: '#1f2937' },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#1f2937', precision: 0 },
+              grid: { color: '#f3f4f6' }
+            }
+          }
+        }
+      });
+    }
+
+    const metricsEl = document.getElementById('modelMetricsChart');
+    if (metricsEl) {
+      new Chart(metricsEl, {
+        type: 'bar',
+        data: {
+          labels: ['Accuracy', 'Precision', 'Recall', 'F1'],
+          datasets: [{
+            label: 'Score (%)',
+            data: [
+              {{ metrics.accuracy if metrics else 0 }},
+              {{ metrics.precision if metrics else 0 }},
+              {{ metrics.recall if metrics else 0 }},
+              {{ metrics.f1 if metrics else 0 }}
+            ],
+            backgroundColor: ['#16a34a', '#f59e0b', '#f97316', '#dc2626'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              ticks: { color: '#1f2937' },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              min: 70,
+              max: 100,
+              ticks: { color: '#1f2937' },
+              grid: { color: '#f3f4f6' }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

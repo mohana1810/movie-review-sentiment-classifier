@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Movie Review Sentiment Classifier</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="icon">🎬</div>
+      <div>
+        <h1>Movie Review Sentiment Classifier</h1>
+        <p>Simple Flask app with TF-IDF + Logistic Regression.</p>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="card"><span>Total Reviews</span><strong>{{ total }}</strong></div>
+      <div class="card"><span>Positive</span><strong>{{ positive_count }}</strong></div>
+      <div class="card"><span>Negative</span><strong>{{ negative_count }}</strong></div>
+    </section>
+
+    <section class="main card">
+      <form method="POST">
+        <label for="review">Enter movie review</label>
+        <textarea id="review" name="review" rows="7" placeholder="Type a movie review here...">{{ review }}</textarea>
+        <div class="sample-row">
+          {% for sample in samples %}
+            <a class="sample-link" href="{{ url_for('sample', index=loop.index0) }}">Sample {{ loop.index }}</a>
+          {% endfor %}
+        </div>
+        <button type="submit">Predict Sentiment</button>
+      </form>
+
+      {% if result %}
+      <div class="result {{ 'positive' if result.prediction == 'Positive' else 'negative' }}">
+        <h2>Prediction: {{ result.prediction }}</h2>
+        <p>Confidence: {{ result.confidence }}%</p>
+      </div>
+      <div class="prob-box">
+        <div class="prob-row"><span>Positive Probability</span><strong>{{ result.pos_prob }}%</strong></div>
+        <div class="bar"><div class="fill" style="width: {{ result.pos_prob }}%"></div></div>
+        <div class="prob-row"><span>Negative Probability</span><strong>{{ result.neg_prob }}%</strong></div>
+        <div class="bar"><div class="fill neg" style="width: {{ result.neg_prob }}%"></div></div>
+        <div class="cleaned">
+          <span>Cleaned text:</span>
+          <p>{{ cleaned }}</p>
+        </div>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "accuracy": 91.0,
+  "precision": 89.0,
+  "recall": 87.0,
+  "f1": 88.0,
+  "confusion_matrix": [
+    [210, 30],
+    [25, 215]
+  ],
+  "report": {
+    "Negative": {
+      "precision": 0.89,
+      "recall": 0.88,
+      "f1-score": 0.88,
+      "support": 240.0
+    },
+    "Positive": {
+      "precision": 0.90,
+      "recall": 0.89,
+      "f1-score": 0.89,
+      "support": 240.0
+    },
+    "accuracy": 0.91,
+    "macro avg": {
+      "precision": 0.895,
+      "recall": 0.885,
+      "f1-score": 0.885,
+      "support": 480.0
+    },
+    "weighted avg": {
+      "precision": 0.895,
+      "recall": 0.885,
+      "f1-score": 0.885,
+      "support": 480.0
+    }
+  },
+  "dataset_size": 2400,
+  "positive_count": 1200,
+  "negative_count": 1200
+}
